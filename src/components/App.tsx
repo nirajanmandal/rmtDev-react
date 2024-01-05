@@ -11,13 +11,11 @@ import Sidebar, { SidebarTop } from "./Sidebar";
 import ResultsCount from "./ResultsCount";
 import SortingControls from "./SortingControls";
 import JobList from "./JobList";
-import { useActiveId, useJobItems } from "../lib/hooks";
+import { useJobItems } from "../lib/hooks";
 
 function App() {
   const [searchText, setSearchText] = useState("");
   const [jobItems, isLoading] = useJobItems(searchText);
-
-  const activeId = useActiveId();
 
   return (
     <>
