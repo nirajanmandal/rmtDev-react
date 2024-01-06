@@ -1,6 +1,54 @@
 import { useEffect, useState } from "react";
 import { jobItemExtended, jobItems } from "./types";
 import { BASE_API_URL } from "./constants";
+import { useQuery } from "@tanstack/react-query";
+
+type JobItemApiResponse = {
+    public: boolean,
+    jobItem: jobItemExtended
+}
+
+const fetchJobItem = async (id: number): Promise<JobItemApiResponse> => {
+    const response = await fetch(`${BASE_API_URL}/${id}`)
+    if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.description)
+    }
+    const data = await response.json()
+    return data
+}
+
+export function useJobItem(id: number | null) {
+    const { data, isInitialLoading } = useQuery(
+        ['job-item', id],
+        () => id ? fetchJobItem(id) : null,
+        {
+            staleTime: 1000 * 60 * 60,
+            refetchOnWindowFocus: false,
+            retry: false,
+            enabled: Boolean(id),
+            onError: (e) => {
+                console.log(e)
+            }
+        }
+    )
+
+    const jobItem = data?.jobItem
+    const isLoading = isInitialLoading || null
+    return { jobItem, isLoading } as const
+}
+
+export function useDebounce<T>(value: T, delay = 500): T {
+    const [debouncedValue, setDebouncedValue] = useState(value)
+
+    useEffect(() => {
+        const timer = setTimeout(() => setDebouncedValue(value), delay)
+
+        return () => clearTimeout(timer)
+    }, [value, delay])
+
+    return debouncedValue
+}
 
 export function useJobItems(searchText: string) {
     const [jobItems, setJobItems] = useState<jobItems[]>([]);
@@ -47,35 +95,4 @@ export function useActiveId() {
     }, []);
 
     return activeId
-}
-
-export function useJobItem(id: number | null) {
-    const [jobItem, setJobItem] = useState<jobItemExtended | null>(null);
-    const [isLoading, setIsLoading] = useState(false)
-
-    useEffect(() => {
-        if (!id) return
-        const getJobItem = async () => {
-            setIsLoading(true)
-            const response = await fetch(`${BASE_API_URL}/${id}`);
-            const data = await response.json();
-            setIsLoading(false)
-            setJobItem(data.jobItem);
-        };
-        getJobItem();
-    }, [id]);
-
-    return { jobItem, isLoading } as const
-}
-
-export function useDebounce<T>(value: T, delay = 500): T {
-    const [debouncedValue, setDebouncedValue] = useState(value)
-
-    useEffect(() => {
-        const timer = setTimeout(() => setDebouncedValue(value), delay)
-
-        return () => clearTimeout(timer)
-    }, [value, delay])
-
-    return debouncedValue
 }
