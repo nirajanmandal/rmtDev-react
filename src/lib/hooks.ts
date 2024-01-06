@@ -38,6 +38,42 @@ export function useJobItem(id: number | null) {
     return { jobItem, isLoading } as const
 }
 
+type JobItemsApiResponse = {
+    public: boolean,
+    sorted: boolean,
+    jobItems: jobItems[]
+}
+
+const fetchJobItems = async (searchText: string): Promise<JobItemsApiResponse> => {
+    const response = await fetch(`${BASE_API_URL}?search=${searchText}`)
+    if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.description)
+    }
+    const data = await response.json()
+    return data
+}
+
+export function useJobItems(searchText: string) {
+    const { data, isInitialLoading } = useQuery(
+        ['job-items', searchText],
+        () => searchText ? fetchJobItems(searchText) : null,
+        {
+            staleTime: 1000 * 60 * 60,
+            refetchOnWindowFocus: false,
+            retry: false,
+            enabled: Boolean(searchText),
+            onError: (e) => {
+                console.log(e)
+            }
+        }
+    )
+
+    return {
+        jobItems: data?.jobItems, isLoading: isInitialLoading
+    } as const
+}
+
 export function useDebounce<T>(value: T, delay = 500): T {
     const [debouncedValue, setDebouncedValue] = useState(value)
 
@@ -48,34 +84,6 @@ export function useDebounce<T>(value: T, delay = 500): T {
     }, [value, delay])
 
     return debouncedValue
-}
-
-export function useJobItems(searchText: string) {
-    const [jobItems, setJobItems] = useState<jobItems[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-
-    const totalNumberOfResults = jobItems.length
-    const jobItemsSliced = jobItems.slice(0, 7)
-
-    useEffect(() => {
-        if (!searchText) return;
-
-        const fetchJobItems = async () => {
-            setIsLoading(true);
-            const response = await fetch(
-                `${BASE_API_URL}?search=${searchText}`
-            );
-            const data = await response.json();
-            setIsLoading(false);
-            setJobItems(data.jobItems);
-        };
-
-        fetchJobItems();
-    }, [searchText]);
-
-    return {
-        jobItemsSliced, isLoading, totalNumberOfResults
-    } as const
 }
 
 export function useActiveId() {
